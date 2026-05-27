@@ -1,62 +1,20 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="utf-8"/>
-<meta http-equiv="x-ua-compatible" content="ie=edge">
-<meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no, shrink-to-fit=no"/>
-<base href="https://cdn.jsdelivr.net/gh/silvereengames/moto-x3m@c72ba90a07db2f632df2527fed097004f46224ce/">
-<link rel="stylesheet" href="app.css" type="text/css"/>
-<title>Moto X3M</title>
-<style>
-  html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; }
-</style>
-<script>
-  // Mock Google IMA SDK (no ads)
-  window.google = window.google || {};
-  window.google.ima = {
-    AdDisplayContainer: function() { return { initialize: function(){}, destroy: function(){} }; },
-    AdsLoader: function() { return { addEventListener: function(){}, requestAds: function(){}, destroy: function(){} }; },
-    AdsRequest: function() { return {}; },
-    AdErrorEvent: { Type: { AD_ERROR: 'adError' } },
-    AdEvent: { Type: { ALL_ADS_COMPLETED: 'allAdsCompleted', CONTENT_PAUSE_REQUESTED: 'contentPauseRequested', CONTENT_RESUME_REQUESTED: 'contentResumeRequested' } }
-  };
-  // Pre-occupy gamemonetize-sdk id so the dynamic load is skipped
-  document.addEventListener('DOMContentLoaded', function() {
-    if (!document.getElementById('gamemonetize-sdk')) {
-      var ph = document.createElement('div');
-      ph.id = 'gamemonetize-sdk';
-      ph.style.display = 'none';
-      document.body.appendChild(ph);
-    }
-  });
-  // Mock SDK events — fire SDK_GAME_START after page loads
-  window.SDK_OPTIONS = {
-    gameId: "1gjwgvl2j0ipdd9ybezeavu04y1nqjen",
-    onEvent: function(event) {}
-  };
-  window.addEventListener('load', function() {
-    setTimeout(function() {
-      var contentEl = document.getElementById('content');
-      if (contentEl && typeof Event === 'function') {
-        contentEl.dispatchEvent(new Event('SDK_GAME_START'));
-      }
-    }, 800);
-  });
-</script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Wheelie Bike</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; background: #1a1a2e; overflow: hidden; }
+    #c2canvas { display: block; margin: 0 auto; }
+  </style>
 </head>
 <body>
-<div id="content"></div>
-<div id="orientation"></div>
-<div id="loader">Loading ...</div>
-<script type="text/javascript" src="min.js"></script>
-<script type="text/javascript" src="jquery.js"></script>
-<script type="text/javascript" src="easeljs.js"></script>
-<script type="text/javascript" src="bluebird.js"></script>
-<script type="text/javascript" src="phaser.js"></script>
-<script type="text/javascript" src="phaser1.js"></script>
-<script type="text/javascript" src="phaser-super.js"></script>
-<script type="text/javascript" src="dragonBones.min.js"></script>
-<script type="text/javascript" src="motox3m4.min.js"></script>
-<script type="text/javascript" src="inject.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/bubbls/UGS-Assets@1a8377d87253610bca22dc9dc44f79020b395c1e/wheelie-bike/box2d.wasm.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/bubbls/UGS-Assets@1a8377d87253610bca22dc9dc44f79020b395c1e/wheelie-bike/scripts/supportcheck.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/bubbls/UGS-Assets@1a8377d87253610bca22dc9dc44f79020b395c1e/wheelie-bike/scripts/offlineclient.js"></script>
+  <script type="module" src="https://cdn.jsdelivr.net/gh/bubbls/UGS-Assets@1a8377d87253610bca22dc9dc44f79020b395c1e/wheelie-bike/scripts/main.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/bubbls/UGS-Assets@1a8377d87253610bca22dc9dc44f79020b395c1e/wheelie-bike/scripts/register-sw.js"></script>
 </body>
 </html>

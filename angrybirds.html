@@ -8,8 +8,6 @@
     <meta name="google" content="notranslate">
     <link rel="shortcut icon" href="icon.png">
     <title>Angry Birds Online</title>
-    <meta name="keywords" content="H5 Games, Angry Birds Online">
-    <meta name="description" content="Play angry birds online">
     <style>
       * { padding: 0; margin: 0; }
       html, body, #container { width: 100%; height: 100%; overflow: hidden; background: black; }
@@ -25,32 +23,92 @@
         font-size: 16px; font-size: 8vh; font-size: min(6vh, 12vw);
         color: #fff; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
       }
-      /* Hide any UI overlay injected by main.js (link/reload buttons) */
+      /* Hide any UI overlay injected by main.js (link/reload buttons, ad iframes) */
       body > a,
       body > button,
+      body > iframe,
       body > div:not(#container):not(#loading) { display: none !important; }
+      /* Hide ad slots inside #container too */
+      #container > iframe,
+      #container > div[id^="google"],
+      #container > div[class*="ad"],
+      #container > div[id*="ad"],
+      ins.adsbygoogle { display: none !important; width: 0 !important; height: 0 !important; }
     </style>
     <script>
-      // Block Google Ads before main.js loads
+      // ── Network-level ad blocking ──────────────────────────────────────
+      // Override fetch to block ad/tracking requests before they hit the network
+      var _origFetch = window.fetch;
+      window.fetch = function(url) {
+        var s = String(url);
+        if (/googlesyndication|doubleclick|gamemonetize|adservice|googleads|googletag|adsense|adnxs|moatads|amazon-adsystem/.test(s)) {
+          return Promise.resolve(new Response('', { status: 200 }));
+        }
+        return _origFetch.apply(this, arguments);
+      };
+      // Override XHR to block ad requests
+      var _origOpen = XMLHttpRequest.prototype.open;
+      XMLHttpRequest.prototype.open = function(method, url) {
+        if (/googlesyndication|doubleclick|gamemonetize|adservice|googleads|adsense|adnxs/.test(String(url))) {
+          this._blocked = true;
+          return;
+        }
+        return _origOpen.apply(this, arguments);
+      };
+      var _origSend = XMLHttpRequest.prototype.send;
+      XMLHttpRequest.prototype.send = function() {
+        if (this._blocked) return;
+        return _origSend.apply(this, arguments);
+      };
+      // ── Script injection blocking ──────────────────────────────────────
+      // Override createElement to intercept ad script tags before they execute
+      var _origCreateElement = document.createElement.bind(document);
+      document.createElement = function(tag) {
+        var el = _origCreateElement(tag);
+        if (tag.toLowerCase() === 'script') {
+          var _origSetSrc = Object.getOwnPropertyDescriptor(HTMLScriptElement.prototype, 'src');
+          Object.defineProperty(el, 'src', {
+            set: function(val) {
+              if (/googlesyndication|doubleclick|gamemonetize|adservice|googleads/.test(String(val))) {
+                Object.defineProperty(el, 'src', { value: '', configurable: true });
+                return;
+              }
+              if (_origSetSrc && _origSetSrc.set) _origSetSrc.set.call(el, val);
+            },
+            get: function() {
+              return _origSetSrc && _origSetSrc.get ? _origSetSrc.get.call(el) : '';
+            },
+            configurable: true
+          });
+        }
+        return el;
+      };
+      // ── Mock ad SDKs ──────────────────────────────────────────────────
       window.adsbygoogle = { loaded: true, push: function() {} };
       window.googletag = {
         cmd: { push: function(fn) { try { fn(); } catch(e) {} } },
         pubads: function() {
-          return { enableSingleRequest: function(){}, setTargeting: function(){},
-            collapseEmptyDivs: function(){}, enableLazyLoad: function(){}, addEventListener: function(){} };
+          return {
+            enableSingleRequest: function(){}, setTargeting: function(){},
+            collapseEmptyDivs: function(){}, enableLazyLoad: function(){},
+            addEventListener: function(){}, refresh: function(){},
+            disableInitialLoad: function(){}, getSlots: function(){ return []; }
+          };
         },
         display: function(){},
-        defineSlot: function() { return { addService: function() { return this; } }; },
-        enableServices: function(){}, destroySlots: function(){}
+        defineSlot: function() { return { addService: function() { return this; }, setTargeting: function(){ return this; } }; },
+        enableServices: function(){}, destroySlots: function(){},
+        defineOutOfPageSlot: function() { return { addService: function(){ return this; } }; }
       };
       window['google_tag_manager'] = {};
-      // Prevent gamemonetize/adsense scripts from actually loading
+      window['google_tag_data'] = { gl: { decorators: [] } };
+      // Block document.write for ad scripts
       var _origDocWrite = document.write.bind(document);
       document.write = function(html) {
-        if (html && (html.includes('googlesyndication') || html.includes('doubleclick') || html.includes('gamemonetize'))) return;
+        if (html && /googlesyndication|doubleclick|gamemonetize|adsbygoogle/.test(html)) return;
         return _origDocWrite(html);
       };
-      // Also watch for injected UI overlays via MutationObserver
+      // ── DOM cleanup observer ───────────────────────────────────────────
       var _KEEP = { container: true, loading: true };
       document.addEventListener('DOMContentLoaded', function() {
         new MutationObserver(function(muts) {
@@ -59,28 +117,32 @@
               if (n.nodeType !== 1) return;
               var tag = n.tagName.toUpperCase();
               if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'LINK' || tag === 'CANVAS') return;
+              // Hide any iframe or ad div added anywhere in the body
+              if (tag === 'IFRAME') { n.style.setProperty('display','none','important'); return; }
+              var id = (n.id || '').toLowerCase();
+              var cls = (n.className || '').toLowerCase();
+              if (/^google|^ad|adsby|gamemon|banner/.test(id) || /ad[\-_]|banner|sponsor/.test(cls)) {
+                n.style.setProperty('display','none','important'); return;
+              }
               if (n.parentNode === document.body && !_KEEP[n.id]) {
                 n.style.setProperty('display', 'none', 'important');
               }
             });
           });
-        }).observe(document.body, { childList: true });
+        }).observe(document.documentElement, { childList: true, subtree: true });
       });
     </script>
   </head>
   <body>
     <div id="container">
       <div id="loading">
-
         <!--[if lte IE 7]>
-                    <script>!function(){var e="offsetWidth",t="offsetHeight",o=document,i="loading",n=o.body,d=function(){var d=o.getElementById(i);d&&(d.style.top=(n[t]-d[t])/2+"px",d.style.left=(n[e]-d[e])/2+"px")},f=o.documentMode;f<=7&&(n.onresize=d,d()),f<=5&&o.write("<style>#"+i+" img{height:70%}</style>")}();</script>
-                <![endif]-->
+          <script>!function(){var e="offsetWidth",t="offsetHeight",o=document,i="loading",n=o.body,d=function(){var d=o.getElementById(i);d&&(d.style.top=(n[t]-d[t])/2+"px",d.style.left=(n[e]-d[e])/2+"px")},f=o.documentMode;f<=7&&(n.onresize=d,d()),f<=5&&o.write("<style>#"+i+" img{height:70%}</style>")}();</script>
+        <![endif]-->
         <img src="icon.png">
         <p id="label">LOADING</p>
       </div>
     </div>
-
-    <!-- main -->
     <script src="main.js"></script>
   </body>
 </html>

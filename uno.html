@@ -1,32 +1,32 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Solitaire</title>
-<style>
-  html, body {
-    margin: 0; padding: 0; width: 100%; height: 100%;
-    background: #1a6e2e; overflow: hidden;
-    display: flex; align-items: center; justify-content: center;
-  }
-  ruffle-player { width: 100%; height: 100%; }
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Temple of Boom</title>
+  <style>
+    * { margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; background: #000; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@ruffle-rs/ruffle@0.2.0-nightly.2025.10.2/ruffle.min.js"></script>
 </head>
 <body>
-  <script src="https://cdn.jsdelivr.net/npm/@ruffle-rs/ruffle@0.2.0-nightly.2025.10.2/ruffle.min.js"></script>
   <script>
-    window.RufflePlayer = window.RufflePlayer || {};
-    window.RufflePlayer.config = {
-      autoplay: "on",
-      unmuteOverlay: "hidden",
-      backgroundColor: "#1a6e2e"
-    };
+    window.addEventListener('load', function() {
+      var ruffle = window.RufflePlayer.newest();
+      var player = ruffle.createPlayer();
+      player.style.width = '100vw';
+      player.style.height = '100vh';
+      player.style.display = 'block';
+      document.body.appendChild(player);
+      player.load({
+        url: 'https://cdn.jsdelivr.net/gh/bubbls/UGS-file-encryption@main/temple-of-boom.swf',
+        scale: 'showAll',
+        quality: 'high',
+        wmode: 'direct',
+        allowFullscreen: true,
+      });
+    });
   </script>
-  <ruffle-player
-    src="https://cdn.jsdelivr.net/gh/bubbls/UGS-file-encryption@bf808b75a3d6ee341eac40ac683648cacec3c4e/solitaire.swf"
-    width="100%"
-    height="100%">
-  </ruffle-player>
 </body>
 </html>
