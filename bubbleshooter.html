@@ -1,136 +1,32 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-  <title>Bubble Shooter</title>
-  <style>
-    html, body { height: 100%; margin: 0; background: #1a1a2e; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; }
-    #game { display: block; border: 2px solid #e94560; border-radius: 8px; touch-action: none; }
-    #controls { display: flex; gap: 16px; margin-top: 12px; }
-    .btn { padding: 12px 28px; background: rgba(233,69,96,0.3); border: 2px solid #e94560; border-radius: 10px; color: #fff; font-size: 22px; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
-    .btn:active { background: rgba(233,69,96,0.7); }
-    #shoot-btn { padding: 12px 36px; background: #e94560; border: none; border-radius: 10px; color: #fff; font-size: 16px; font-weight: bold; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-    #shoot-btn:active { opacity: 0.7; }
-  </style>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Bubble Shooter</title>
+<style>
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    background: #000; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+  }
+  ruffle-player { width: 100%; height: 100%; }
+</style>
 </head>
 <body>
-  <canvas id="game"></canvas>
-  <div id="controls">
-    <button class="btn" id="leftBtn">◀</button>
-    <button id="shoot-btn">🔵 SHOOT</button>
-    <button class="btn" id="rightBtn">▶</button>
-  </div>
-<script>
-const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
-const maxW = Math.min(window.innerWidth - 8, 320);
-const maxH = Math.min(window.innerHeight - 120, 480);
-const S = Math.min(maxW / 271, maxH / 392);
-canvas.width = Math.floor(271 * S);
-canvas.height = Math.floor(392 * S);
-const grid = Math.floor(32 * S);
-const wallSize = Math.floor(4 * S);
-const colorMap = { 'R':'red','G':'green','B':'blue','Y':'yellow' };
-const colors = ['red','green','blue','yellow'];
-const level1 = [
-  ['R','R','Y','Y','B','B','G','G'],
-  ['R','R','Y','Y','B','B','G'],
-  ['B','B','G','G','R','R','Y','Y'],
-  ['B','G','G','R','R','Y','Y']
-];
-const bubbles = [];
-let particles = [];
-const degRad = d => d * Math.PI / 180;
-const rotPt = (x, y, a) => ({ x: x*Math.cos(a)-y*Math.sin(a), y: x*Math.sin(a)+y*Math.cos(a) });
-const dist = (a, b) => Math.sqrt((a.x-b.x)**2+(a.y-b.y)**2);
-const collides = (a, b) => dist(a,b) < a.radius+b.radius;
-const rnd = (mn,mx) => Math.floor(Math.random()*(Math.floor(mx)-Math.ceil(mn)+1))+Math.ceil(mn);
-
-function getClosest(obj, active=false) {
-  const c = bubbles.filter(b=>b.active==active&&collides(obj,b));
-  if (!c.length) return null;
-  return c.map(b=>({d:dist(obj,b),b})).sort((a,b)=>a.d-b.d)[0].b;
-}
-function mkBubble(x,y,color) {
-  const row=Math.floor(y/grid), col=Math.floor(x/grid);
-  const sx=row%2===0?0:0.5*grid, cx=grid/2;
-  bubbles.push({x:wallSize+(grid+1)*col+sx+cx, y:wallSize+(grid-3*S)*row+cx, radius:grid/2, color, active:!!color});
-}
-function neighbors(b) {
-  const ns=[];
-  [0,60,120,180,240,300].map(d=>rotPt(grid,0,degRad(d))).forEach(dir=>{
-    const n=getClosest({x:b.x+dir.x,y:b.y+dir.y,radius:b.radius},true);
-    if(n&&n!==b&&!ns.includes(n)) ns.push(n);
-  });
-  return ns;
-}
-function removeMatch(t) {
-  const m=[t]; bubbles.forEach(b=>b.processed=false); t.processed=true;
-  let ns=neighbors(t);
-  for(let i=0;i<ns.length;i++){const n=ns[i];if(!n.processed){n.processed=true;if(n.color===t.color){m.push(n);ns=ns.concat(neighbors(n));}}}
-  if(m.length>=3) m.forEach(b=>b.active=false);
-}
-function dropFloating() {
-  const active=bubbles.filter(b=>b.active);
-  active.forEach(b=>b.processed=false);
-  let ns=active.filter(b=>b.y-grid<=wallSize);
-  for(let i=0;i<ns.length;i++){const n=ns[i];if(!n.processed){n.processed=true;ns=ns.concat(neighbors(n));}}
-  active.filter(b=>!b.processed).forEach(b=>{b.active=false;particles.push({x:b.x,y:b.y,color:b.color,radius:b.radius,active:true});});
-}
-for(let r=0;r<10;r++) for(let c=0;c<(r%2===0?8:7);c++) mkBubble(c*grid,r*grid,colorMap[level1[r]?.[c]]);
-
-const pos={x:canvas.width/2,y:canvas.height-grid*1.5};
-const ball={x:pos.x,y:pos.y,color:'red',radius:grid/2,speed:8*S,dx:0,dy:0};
-let ang=0, dir=0;
-const minA=degRad(-60), maxA=degRad(60);
-
-function newBall(){ball.x=pos.x;ball.y=pos.y;ball.dx=ball.dy=0;ball.color=colors[rnd(0,3)];}
-function shoot(){if(!ball.dx&&!ball.dy){ball.dx=Math.sin(ang)*ball.speed;ball.dy=-Math.cos(ang)*ball.speed;}}
-function onHit(b){b.color=ball.color;b.active=true;newBall();removeMatch(b);dropFloating();}
-
-function loop() {
-  requestAnimationFrame(loop);
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  ang=Math.max(minA,Math.min(maxA,ang+degRad(2)*dir));
-  ball.x+=ball.dx; ball.y+=ball.dy;
-  if(ball.x-grid/2<wallSize){ball.x=wallSize+grid/2;ball.dx*=-1;}
-  else if(ball.x+grid/2>canvas.width-wallSize){ball.x=canvas.width-wallSize-grid/2;ball.dx*=-1;}
-  if(ball.y-grid/2<wallSize){const c=getClosest(ball);if(c)onHit(c);}
-  for(const b of bubbles){if(b.active&&collides(ball,b)){const c=getClosest(ball);if(!c){location.reload();return;}onHit(c);break;}}
-  particles.forEach(p=>p.y+=8*S);
-  particles=particles.filter(p=>p.y<canvas.height-grid/2);
-
-  ctx.fillStyle='lightgrey';
-  ctx.fillRect(0,0,canvas.width,wallSize);
-  ctx.fillRect(0,0,wallSize,canvas.height);
-  ctx.fillRect(canvas.width-wallSize,0,wallSize,canvas.height);
-
-  bubbles.concat(particles).forEach(b=>{
-    if(!b.active)return;
-    ctx.fillStyle=b.color;ctx.beginPath();ctx.arc(b.x,b.y,b.radius,0,2*Math.PI);ctx.fill();
-    ctx.fillStyle='rgba(255,255,255,0.3)';ctx.beginPath();ctx.arc(b.x-b.radius*.3,b.y-b.radius*.3,b.radius*.3,0,2*Math.PI);ctx.fill();
-  });
-
-  ctx.save();ctx.translate(pos.x,pos.y);ctx.rotate(ang);ctx.translate(0,-grid/2*4.5);
-  ctx.strokeStyle='white';ctx.lineWidth=2;ctx.beginPath();
-  ctx.moveTo(0,0);ctx.lineTo(0,grid*2);ctx.moveTo(0,0);ctx.lineTo(-10*S,grid*.4);ctx.moveTo(0,0);ctx.lineTo(10*S,grid*.4);
-  ctx.stroke();ctx.restore();
-
-  ctx.fillStyle=ball.color;ctx.beginPath();ctx.arc(ball.x,ball.y,ball.radius,0,2*Math.PI);ctx.fill();
-}
-
-document.addEventListener('keydown',e=>{if(e.key==='a')dir=-1;else if(e.key==='d')dir=1;if(e.code==='Space')shoot();});
-document.addEventListener('keyup',e=>{if(e.key==='a'&&dir===-1)dir=0;else if(e.key==='d'&&dir===1)dir=0;});
-const L=document.getElementById('leftBtn'), R=document.getElementById('rightBtn');
-document.getElementById('shoot-btn').addEventListener('click',shoot);
-L.addEventListener('touchstart',e=>{e.preventDefault();dir=-1;},{passive:false});
-L.addEventListener('touchend',e=>{e.preventDefault();dir=0;},{passive:false});
-R.addEventListener('touchstart',e=>{e.preventDefault();dir=1;},{passive:false});
-R.addEventListener('touchend',e=>{e.preventDefault();dir=0;},{passive:false});
-L.addEventListener('mousedown',()=>dir=-1); L.addEventListener('mouseup',()=>dir=0);
-R.addEventListener('mousedown',()=>dir=1);  R.addEventListener('mouseup',()=>dir=0);
-requestAnimationFrame(loop);
-</script>
+  <script src="https://cdn.jsdelivr.net/npm/@ruffle-rs/ruffle@0.2.0-nightly.2025.10.2/ruffle.min.js"></script>
+  <script>
+    window.RufflePlayer = window.RufflePlayer || {};
+    window.RufflePlayer.config = {
+      autoplay: "on",
+      unmuteOverlay: "hidden",
+      backgroundColor: "#000000"
+    };
+  </script>
+  <ruffle-player
+    src="https://cdn.jsdelivr.net/gh/oldflashgames/games1@627d7cb5f49465a18a8320b9339dbc3cf577b5d8/bubble-shooter.swf"
+    width="100%"
+    height="100%">
+  </ruffle-player>
 </body>
 </html>
