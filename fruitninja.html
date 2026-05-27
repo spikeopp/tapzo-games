@@ -17,7 +17,20 @@
 
   <link rel="manifest" href="./manifest.json" />
 
-  <script src=poki-sdk.js></script>
+  <!-- Mock PokiSDK so game doesn't stall waiting for Poki servers -->
+  <script>
+    window.PokiSDK = {
+      gameLoadingStart: function() {},
+      gameLoadingFinished: function() {},
+      gameplayStart: function() {},
+      gameplayStop: function() {},
+      commercialBreak: function() { return Promise.resolve(); },
+      rewardedBreak: function(cb) { if(cb) cb({success:true}); return Promise.resolve(); },
+      setDebug: function() {},
+      shareableURL: function() { return Promise.resolve(window.location.href); },
+      init: function() { return Promise.resolve(); }
+    };
+  </script>
 
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />

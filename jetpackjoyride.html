@@ -7,12 +7,37 @@
 
 <!DOCTYPE html>  
 <html>
-    <head>  
+    <head>
         <meta charset="utf-8" />
         <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
         <title> Jetpack Joyride </title>
         <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/gh/genizy/jride@475e65ec2f642cf50bb80f09f4f4188cf8c26faa/css/styles.css">
         <meta name="viewport" content="user-scalable=no"/>
+        <!-- Mock h5Sdk to prevent game blocking on SDK init -->
+        <script>
+          window.h5Sdk = {
+            onStart: function(cb) { if(cb) setTimeout(cb, 0); },
+            addEventListener: function() {},
+            dispatchEvent: function() {},
+            readyForInteraction: function() {},
+            gameplayStart: function() {},
+            gameplayStop: function() {}
+          };
+          window.PokiSDK = {
+            gameLoadingStart: function() {},
+            gameLoadingFinished: function() {},
+            gameplayStart: function() {},
+            gameplayStop: function() {},
+            commercialBreak: function() { return Promise.resolve(); },
+            rewardedBreak: function(cb) { if(cb) cb({success:true}); return Promise.resolve(); }
+          };
+        </script>
+        <!-- Force portrait mode to show game canvas, not rotation notice -->
+        <style>
+          #rotate_image { display: none !important; }
+          #content { display: block !important; width: 100vw !important; height: 100vh !important; }
+          canvas { max-width: 100vw !important; }
+        </style>
         <script type="text/javascript" src="https://cdn.jsdelivr.net/gh/genizy/jride@475e65ec2f642cf50bb80f09f4f4188cf8c26faa/h5Sdk.js"></script>
         <script type="text/javascript" src="https://cdn.jsdelivr.net/gh/genizy/jride@475e65ec2f642cf50bb80f09f4f4188cf8c26faa/engine/phaser-3.24.1.min.js"></script>
         <script type="text/javascript" src="https://cdn.jsdelivr.net/gh/genizy/jride@475e65ec2f642cf50bb80f09f4f4188cf8c26faa/game3.js"></script>
