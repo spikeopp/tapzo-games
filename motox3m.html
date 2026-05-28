@@ -1,20 +1,47 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8">
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Wheelie Bike</title>
+  <title>Eggy Car</title>
+  <base href="https://cdn.jsdelivr.net/gh/bubbls/UGS-Assets@main/eggy%20car/">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; background: #1a1a2e; overflow: hidden; }
-    #c2canvas { display: block; margin: 0 auto; }
+    * { padding: 0; margin: 0; }
+    html, body { background: #000; overflow: hidden; width: 100%; height: 100%; touch-action: none; }
+    canvas { touch-action: none; -ms-touch-action: none; display: block; margin: 0 auto; }
+    @font-face { font-family: 'Changa One'; src: url('changaone_regular.ttf.ttf'); }
   </style>
+  <script>
+    // Mock Google IMA (ads) so game doesn't try to load ad SDK
+    window.google = window.google || {};
+    window.google.ima = {
+      AdDisplayContainer: function(){ return { initialize: function(){}, destroy: function(){} }; },
+      AdsLoader: function(){ return { addEventListener: function(){}, requestAds: function(){}, destroy: function(){} }; },
+      AdsRequest: function(){ return {}; },
+      AdErrorEvent: { Type: { AD_ERROR: 'adError' } },
+      AdEvent: { Type: { ALL_ADS_COMPLETED: 'allAdsCompleted', CONTENT_PAUSE_REQUESTED: 'contentPauseRequested', CONTENT_RESUME_REQUESTED: 'contentResumeRequested' } }
+    };
+    // Disable service worker registration (not supported in WebView)
+    window.C2_RegisterSW = function() {};
+  </script>
 </head>
 <body>
-  <script src="https://cdn.jsdelivr.net/gh/bubbls/UGS-Assets@1a8377d87253610bca22dc9dc44f79020b395c1e/wheelie-bike/box2d.wasm.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/bubbls/UGS-Assets@1a8377d87253610bca22dc9dc44f79020b395c1e/wheelie-bike/scripts/supportcheck.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/bubbls/UGS-Assets@1a8377d87253610bca22dc9dc44f79020b395c1e/wheelie-bike/scripts/offlineclient.js"></script>
-  <script type="module" src="https://cdn.jsdelivr.net/gh/bubbls/UGS-Assets@1a8377d87253610bca22dc9dc44f79020b395c1e/wheelie-bike/scripts/main.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/bubbls/UGS-Assets@1a8377d87253610bca22dc9dc44f79020b395c1e/wheelie-bike/scripts/register-sw.js"></script>
+  <div id="c2canvasdiv">
+    <canvas id="c2canvas" width="1280" height="720"></canvas>
+  </div>
+  <script src="jquery-2.1.1.min.js"></script>
+  <script src="c4runtime.js"></script>
+  <script>
+    jQuery(document).ready(function() {
+      cr_createRuntime('c2canvas');
+    });
+    function onVisChange() {
+      var h = document.hidden || document.mozHidden || document.webkitHidden || document.msHidden;
+      if (typeof cr_setSuspended === 'function') cr_setSuspended(h);
+    }
+    ['visibilitychange','mozvisibilitychange','webkitvisibilitychange','msvisibilitychange'].forEach(function(e) {
+      document.addEventListener(e, onVisChange, false);
+    });
+  </script>
 </body>
 </html>

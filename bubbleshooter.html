@@ -3,23 +3,224 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Idle Breakout</title>
+  <title>Breakout</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; background: #0a0a0a; overflow: hidden; }
-    canvas { display: block; margin: 0 auto; max-width: 100%; max-height: 100vh; }
+    * { margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a1a; }
+    canvas { display: block; touch-action: none; }
   </style>
 </head>
 <body>
-  <canvas id="canvas"></canvas>
-  <script>
-    window.gameId = 'id-br';
-  </script>
-  <script src="https://cdn.jsdelivr.net/gh/bobydob/JSEngine@9b6eab8976a7acc4aee72479af6564769363abc/build/id-br/ibo.js"></script>
-  <script>
-    window.onload = function() {
-      if (typeof GameMaker_Init === 'function') GameMaker_Init();
-    };
-  </script>
+<canvas id="c"></canvas>
+<script>
+(function() {
+  var canvas = document.getElementById('c');
+  var ctx = canvas.getContext('2d');
+  var W, H, paddle, ball, bricks, particles, score, lives, state, touchX;
+  var COLORS = ['#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#a855f7','#ec4899','#06b6d4'];
+
+  function resize() {
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+    if (state !== 'playing') initGame();
+    else {
+      paddle.y = H - 70;
+      paddle.w = Math.max(W * 0.22, 80);
+    }
+  }
+
+  function initGame() {
+    var COLS = 7, ROWS = 6;
+    var bW = (W - 20) / COLS;
+    var bH = Math.min(28, H * 0.055);
+    var topOff = H * 0.13;
+    paddle = { w: Math.max(W*0.22,80), h: 13, x: W/2, y: H - 70 };
+    ball   = { r: 8, x: W/2, y: paddle.y - 18, vx: 0, vy: 0, launched: false };
+    bricks = []; particles = []; score = 0; lives = 3; state = 'playing';
+    for (var r = 0; r < ROWS; r++) {
+      for (var c = 0; c < COLS; c++) {
+        bricks.push({
+          x: 10 + c*bW, y: topOff + r*(bH+6),
+          w: bW-5, h: bH,
+          color: COLORS[r % COLORS.length],
+          pts: (ROWS - r) * 10, alive: true
+        });
+      }
+    }
+  }
+
+  function rrect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y);
+    ctx.quadraticCurveTo(x+w,y, x+w,y+r);
+    ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h, x+w-r,y+h);
+    ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h, x,y+h-r);
+    ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y, x+r,y);
+    ctx.closePath();
+  }
+
+  function spawnParticles(x, y, col) {
+    for (var i = 0; i < 10; i++) {
+      var a = (Math.PI*2/10)*i + (Math.random()-0.5)*0.4;
+      var spd = 2 + Math.random()*3;
+      particles.push({ x:x, y:y, vx:Math.cos(a)*spd, vy:Math.sin(a)*spd, alpha:1, color:col, r:2+Math.random()*3 });
+    }
+  }
+
+  function launch() {
+    var spd = Math.min(W, H) * 0.009;
+    ball.vx = (Math.random()>0.5?1:-1) * spd * 0.65;
+    ball.vy = -spd;
+    ball.launched = true;
+  }
+
+  canvas.addEventListener('touchstart', function(e) {
+    e.preventDefault();
+    touchX = e.touches[0].clientX;
+    if (state === 'playing' && !ball.launched) launch();
+    else if (state !== 'playing') { initGame(); }
+  }, { passive: false });
+  canvas.addEventListener('touchmove', function(e) {
+    e.preventDefault();
+    touchX = e.touches[0].clientX;
+  }, { passive: false });
+
+  function loop() {
+    // Background
+    ctx.fillStyle = '#0a0a1a';
+    ctx.fillRect(0,0,W,H);
+    ctx.strokeStyle = 'rgba(255,255,255,0.025)';
+    ctx.lineWidth = 1;
+    for (var gx=0;gx<W;gx+=44){ctx.beginPath();ctx.moveTo(gx,0);ctx.lineTo(gx,H);ctx.stroke();}
+    for (var gy=0;gy<H;gy+=44){ctx.beginPath();ctx.moveTo(0,gy);ctx.lineTo(W,gy);ctx.stroke();}
+
+    if (state === 'playing') {
+      // Paddle movement
+      if (touchX !== undefined) {
+        paddle.x += (touchX - paddle.x) * 0.28;
+        paddle.x = Math.max(paddle.w/2, Math.min(W-paddle.w/2, paddle.x));
+      }
+
+      // Ball movement
+      if (ball.launched) {
+        ball.x += ball.vx; ball.y += ball.vy;
+
+        // Wall bounce
+        if (ball.x - ball.r < 0)  { ball.x = ball.r;      ball.vx =  Math.abs(ball.vx); }
+        if (ball.x + ball.r > W)  { ball.x = W-ball.r;    ball.vx = -Math.abs(ball.vx); }
+        if (ball.y - ball.r < 0)  { ball.y = ball.r;      ball.vy =  Math.abs(ball.vy); }
+
+        // Lost ball
+        if (ball.y > H + 30) {
+          lives--;
+          if (lives <= 0) { state = 'over'; }
+          else { ball.x=paddle.x; ball.y=paddle.y-18; ball.vx=0; ball.vy=0; ball.launched=false; }
+        }
+
+        // Paddle collision
+        var px = paddle.x - paddle.w/2, py = paddle.y - paddle.h/2;
+        if (ball.vy > 0 && ball.y+ball.r >= py && ball.y+ball.r <= py+paddle.h+6 &&
+            ball.x >= px-4 && ball.x <= px+paddle.w+4) {
+          ball.vy = -Math.abs(ball.vy);
+          ball.vx = ((ball.x - paddle.x) / (paddle.w/2)) * Math.abs(ball.vy) * 0.9;
+          ball.y = py - ball.r;
+        }
+
+        // Brick collision
+        for (var i=0; i<bricks.length; i++) {
+          var b = bricks[i];
+          if (!b.alive) continue;
+          if (ball.x+ball.r>b.x && ball.x-ball.r<b.x+b.w && ball.y+ball.r>b.y && ball.y-ball.r<b.y+b.h) {
+            b.alive = false; score += b.pts;
+            spawnParticles(b.x+b.w/2, b.y+b.h/2, b.color);
+            var olL=(ball.x+ball.r)-b.x, olR=(b.x+b.w)-(ball.x-ball.r);
+            var olT=(ball.y+ball.r)-b.y, olB=(b.y+b.h)-(ball.y-ball.r);
+            if (Math.min(olL,olR) < Math.min(olT,olB)) ball.vx=-ball.vx;
+            else ball.vy=-ball.vy;
+            break;
+          }
+        }
+
+        // Win check
+        if (bricks.every(function(b){return !b.alive;})) state = 'win';
+      } else {
+        ball.x = paddle.x;
+      }
+
+      // Particles
+      ctx.save();
+      for (var j=particles.length-1; j>=0; j--) {
+        var p=particles[j];
+        p.x+=p.vx; p.y+=p.vy; p.vy+=0.18; p.alpha-=0.035;
+        if (p.alpha<=0){particles.splice(j,1);continue;}
+        ctx.globalAlpha=p.alpha; ctx.fillStyle=p.color;
+        ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();
+      }
+      ctx.restore();
+
+      // Draw bricks
+      for (var k=0; k<bricks.length; k++) {
+        var br=bricks[k];
+        if (!br.alive) continue;
+        ctx.shadowColor=br.color; ctx.shadowBlur=10;
+        ctx.fillStyle=br.color;
+        rrect(br.x,br.y,br.w,br.h,5); ctx.fill();
+        ctx.shadowBlur=0;
+        ctx.fillStyle='rgba(255,255,255,0.22)';
+        rrect(br.x+2,br.y+2,br.w-4,br.h*0.42,3); ctx.fill();
+      }
+
+      // Draw paddle
+      ctx.shadowColor='#8ecfff'; ctx.shadowBlur=14;
+      ctx.fillStyle='#e2e8f0';
+      rrect(paddle.x-paddle.w/2, paddle.y-paddle.h/2, paddle.w, paddle.h, 7); ctx.fill();
+      ctx.shadowBlur=0;
+
+      // Draw ball
+      ctx.shadowColor='#7dd3fc'; ctx.shadowBlur=18;
+      ctx.fillStyle='#ffffff';
+      ctx.beginPath(); ctx.arc(ball.x,ball.y,ball.r,0,Math.PI*2); ctx.fill();
+      ctx.shadowBlur=0;
+
+      // HUD
+      var fs = Math.round(H*0.026);
+      ctx.fillStyle='#ffffff'; ctx.textBaseline='middle';
+      ctx.font='bold '+fs+'px sans-serif';
+      ctx.textAlign='left';  ctx.fillText('Score: '+score, 14, H*0.055);
+      ctx.textAlign='right'; ctx.fillText('❤ '.repeat(lives).trim(), W-14, H*0.055);
+
+      if (!ball.launched) {
+        ctx.fillStyle='rgba(255,255,255,0.55)';
+        ctx.font=(Math.round(H*0.025))+'px sans-serif';
+        ctx.textAlign='center';
+        ctx.fillText('Tap to launch ball', W/2, H*0.87);
+      }
+
+    } else {
+      // Overlay
+      ctx.fillStyle='rgba(0,0,0,0.72)'; ctx.fillRect(0,0,W,H);
+      var bigF = Math.round(H*0.075), midF = Math.round(H*0.042), smlF = Math.round(H*0.03);
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      if (state === 'over') {
+        ctx.fillStyle='#ef4444'; ctx.font='bold '+bigF+'px sans-serif';
+        ctx.fillText('Game Over', W/2, H*0.42);
+      } else {
+        ctx.fillStyle='#22c55e'; ctx.font='bold '+bigF+'px sans-serif';
+        ctx.fillText('You Win! 🎉', W/2, H*0.42);
+      }
+      ctx.fillStyle='#ffffff'; ctx.font=midF+'px sans-serif';
+      ctx.fillText('Score: '+score, W/2, H*0.53);
+      ctx.fillStyle='rgba(255,255,255,0.65)'; ctx.font=smlF+'px sans-serif';
+      ctx.fillText('Tap to play again', W/2, H*0.62);
+    }
+
+    requestAnimationFrame(loop);
+  }
+
+  window.addEventListener('resize', resize);
+  resize();
+  loop();
+})();
+</script>
 </body>
 </html>
